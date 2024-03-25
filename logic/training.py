@@ -107,6 +107,11 @@ def run(args):
             loss_avg = loss_avg * 0.8 + float(loss) * 0.2
         train_loss = loss_avg
 
+        if hasattr(args, 'train_auroc') and args.train_auroc:
+            auroc = create_auroc_metrics(model=model, args=args, adversarial=False)
+        else:
+            auroc = "empty"
+
         return train_loss,""
 
     def train_adversarial_imagenet(iters):
@@ -181,7 +186,7 @@ def run(args):
 
         return mavs,aurocs
     
-    def run_training_loop(args, model, device):
+    def run_training_loop(args):
         """
         Runs the training loop for the given model and dataset.
 
@@ -224,7 +229,7 @@ def run(args):
     def run_training(model, device, args):
 
         # ----------- run training loop -----------
-        losses, aurocs_train = run_training_loop(args, model, device)
+        losses, aurocs_train = run_training_loop(args)
 
         # ----------- save model -----------
         #save_model(model, architecture_folder)
