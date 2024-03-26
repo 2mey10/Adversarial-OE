@@ -11,6 +11,7 @@ from pytorch_ood.dataset.img import TinyImages300k
 import os
 from pytorch_ood.model import WideResNet
 from pytorch_ood.utils import ToRGB
+from torch.utils.data import TensorDataset
 from torchvision.models import resnet101
 from torchvision.utils import save_image
 from torch.utils.data import random_split, Subset
@@ -101,16 +102,28 @@ def get_training_datasets(args):
     if args.dataset_out == "GAN_IMG":
         # print(f"LOG: Loading GAN images for {args.dataset_in}... ")
         if args.dataset_in in ["cifar10", "cifar100"]:
-            if args.dataset_in == "cifar10":
-                gan_file_name = "samples-c10.pt"
-            if args.dataset_in == "cifar100":
-                gan_file_name = "samples-c100.pt"
-
+            # use args.gan_sigma for the gan_file_name
+            gan_file_name = f"samples-{args.gan_sigma}.npz"
             gan_path = os.path.join(os.getcwd(), 'datasets', gan_file_name)
-            #print(gan_path)
-            gan_data = torch.load(gan_path)
+            gan_data_numpy = np.load(gan_path)
+
+            gan_data = torch.from_numpy(gan_data_numpy['x'])
+
+            # if args.dataset_in == "cifar10":
+            #     gan_file_name = "samples-c10.pt"
+            # if args.dataset_in == "cifar100":
+            #     gan_file_name = "samples-c100.pt"
+
+            # gan_path = os.path.join(os.getcwd(), 'datasets', gan_file_name)
+            # #print(gan_path)
+            # gan_data = torch.load(gan_path)
             # normalize gan images and set the target to -1
             train_data_out = [(el / 255, -1) for el in gan_data]
+            train_data_out = random_split(train_data_out,[args.n_out_images, len(train_data_out)-args.n_out_images])[0]
+            # artificially makes this 50000 long, copy the train_data_out so often as needed til the len is 50k
+            while len(train_data_out) < 50000:
+                train_data_out = train_data_out + train_data_out
+            train_data_out = Subset(train_data_out, range(50000))
 
         if args.dataset_in == "imagenet":
             gan_data_path = f"{args.imagenet_gan_out_path}{args.gan_sigma}/"

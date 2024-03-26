@@ -108,11 +108,12 @@ def run(args):
         train_loss = loss_avg
 
         if hasattr(args, 'train_auroc') and args.train_auroc:
+            print("Calculating training AUROC")
             auroc = create_auroc_metrics(model=model, args=args, adversarial=False)
         else:
             auroc = "empty"
 
-        return train_loss,""
+        return train_loss,auroc
 
     def train_adversarial_imagenet(iters):
         loss_avg = 0.0
@@ -209,8 +210,9 @@ def run(args):
             for epoch in range(args.epochs):
                 begin_epoch = time.time()
 
-                train_loss_epoch, aurocs_train = train_adversarial_default(epoch)
+                train_loss_epoch, auroc_train = train_adversarial_default(epoch)
                 losses.append({"epoch": epoch, "loss": round(train_loss_epoch, 4)})
+                aurocs_train.append({"epoch": epoch, "auroc": auroc_train})
 
                 print(
                     f'Epoch {epoch + 1:3d} | Time {int(time.time() - begin_epoch):5d} | Train Loss {train_loss_epoch:.4f}')
@@ -229,7 +231,22 @@ def run(args):
     def run_training(model, device, args):
 
         # ----------- run training loop -----------
+        # one accuracy for the fans :D
+        accuracy_dict = compute_accuracy(model, device, args)
+        print("Accuracy before OE: ", accuracy_dict)
+        
         losses, aurocs_train = run_training_loop(args)
+
+        # save aurcos to json file
+        now = datetime.now()
+
+        # Format as string: YYYYMMDD_HHMMSS
+        train_id = now.strftime("%Y%m%d_%H%M%S")
+
+        # Save aurocs to json file
+        Path("training_aurocs").mkdir(parents=True, exist_ok=True)
+        with open(f"training_aurocs/{train_id}.json", "w") as f:
+            json.dump(aurocs_train, f)
 
         # ----------- save model -----------
         #save_model(model, architecture_folder)
@@ -275,6 +292,7 @@ def run(args):
 
         # append the random_id to the dataframe
         df["save_id"] = id
+        df["train_id"] = train_id
 
         # save accuracy to dataframe
         add_experiment_results(df, results=accuracy_dict, column_name="accuracy")

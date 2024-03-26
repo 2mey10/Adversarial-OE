@@ -318,4 +318,5 @@ pyrightconfig.json
 notes.md
 *.xlsx
 /adversarial_aurocs
+/training_aurocs
 /plots
