@@ -1,5 +1,5 @@
 # experiment configuration, naming makes data analysis easier
-name: 'This experiment computes EBA AOE and OE and then computes AUROC and Adversarial AUROC for CIFAR10 and CIFAR100 with GAN Outliers.'
+name: 'Compute AUROC for CIFAR10 and CIFAR100 with adversarial GAN outliers for various epsilons. Evaluation with MSP, EBO and ODIN'
 short_name: 'cifar_effect_epochs'
 
 
@@ -13,13 +13,13 @@ model: wrn
 # which dataset to use as outliers? In our paper we use GAN_IMG, but 300K is supported for  cifar10 and cifar100 -> [GAN_IMG, 300K]
 dataset_out: GAN_IMG
 # epochs to train for
-epochs: 1
+epochs: 10
 # learning rate to use
 learning_rate: 0.0005
 # batch size for training
-batch_size: 64
+batch_size: 128
 # batch size for outlier data
-oe_batch_size: 64
+oe_batch_size: 128
 # batch size for testing
 test_bs: 128
 # momentum for optimizer
@@ -42,7 +42,7 @@ decay: 0.0005
 
 #adv_oe: EBA
 # epsilon for adversarial attacks
-eps_oe: 0.5
+# eps_oe: 0.5
 # alpha for iterative attacks
 alpha_oe: 0.03
 # steps for iterative attacks
@@ -71,9 +71,9 @@ gan_sigma: 2.0
 # train_auroc: compute auroc for OOD data during training
 train_auroc: True
 # test_auroc: compute auroc for OOD data after training
-test_auroc: False
+test_auroc: True
 # adversarial_test_auroc: compute auroc for adversarial OOD data after training
-adversarial_test_auroc: False 
+adversarial_test_auroc: True 
 
 
 # ---- hydra configuration ----
@@ -87,4 +87,5 @@ hydra:
   sweeper:
     params:
       +adv_oe: EBA
+      +eps_oe: 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0
       +dataset_in: cifar10, cifar100

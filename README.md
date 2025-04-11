@@ -6,7 +6,8 @@ Our work is based on the paper of https://arxiv.org/pdf/1812.04606.pdf and the g
 Our new contribution is the integration of adversarial attacks on outliers during training.
 
 ## Installation
-# TODO create requirements.txt
+# TODO commands to install requirements.txt
+### python 3.8
 
 # TODO provide download links for the GAN-generated Outliers
 

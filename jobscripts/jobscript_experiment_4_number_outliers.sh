@@ -21,7 +21,7 @@ conda activate aoe
 cd /nfs1/$USER/AOE/Adversarial-Outlier-Exposure
 echo "pwd=$(pwd)"
 python -V #moves to the main directory
-srun python3 run.py --config-name debug_imagenet.yaml >slurm-$SLURM_JOBID.pyout 2>&1
+srun python3 run.py --config-name cifar_exp_4_number_outliers.yaml >slurm-$SLURM_JOBID.pyout 2>&1
 deactivate  # workoff :)
 . /usr/local/bin/slurmEpilog.sh   # cleanup
 

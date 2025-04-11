@@ -51,6 +51,10 @@ def run(args):
 
     loss_fn = OutlierExposureLoss()
 
+    # produce metrics before start
+    start_auroc = create_auroc_metrics(model=model, args=args, adversarial=False)
+    print("AUROC before training: ", start_auroc)
+
     def train_adversarial_default(epoch):
         loss_avg = 0.0
         model.train()  # enter train mode
@@ -78,7 +82,7 @@ def run(args):
             # create a copy of the model
             model_copy = copy.deepcopy(model)
             
-            # perform adversarial attack on outliers
+            # # perform adversarial attack on outliers
             perturbed_outlier = generate_adversarial_outlier(args, model_copy, inlier, outlier, target_inlier,
                                                              target_outlier, args.eps_oe, device)
 
@@ -231,7 +235,6 @@ def run(args):
     def run_training(model, device, args):
 
         # ----------- run training loop -----------
-        # one accuracy for the fans :D
         accuracy_dict = compute_accuracy(model, device, args)
         print("Accuracy before OE: ", accuracy_dict)
         
@@ -241,11 +244,11 @@ def run(args):
         now = datetime.now()
 
         # Format as string: YYYYMMDD_HHMMSS
-        train_id = now.strftime("%Y%m%d_%H%M%S")
+        id = now.strftime("%Y%m%d_%H%M%S")
 
         # Save aurocs to json file
         Path("training_aurocs").mkdir(parents=True, exist_ok=True)
-        with open(f"training_aurocs/{train_id}.json", "w") as f:
+        with open(f"training_aurocs/{id}.json", "w") as f:
             json.dump(aurocs_train, f)
 
         # ----------- save model -----------
@@ -261,13 +264,13 @@ def run(args):
         else:
             aurocs_test = {"empty": "empty"}
 
+        # Save aurocs to json file
+        Path("test_aurocs").mkdir(parents=True, exist_ok=True)
+        with open(f"test_aurocs/{id}.json", "w") as f:
+            json.dump(aurocs_test, f)
+
         # ----------- compute adversarial AUROC -----------
         # create a random id between 0 and 1000000 to save the json file
-        # Get current date and time
-        now = datetime.now()
-
-        # Format as string: YYYYMMDD_HHMMSS
-        id = now.strftime("%Y%m%d_%H%M%S")
 
         if args.adversarial_test_auroc:
             aurocs_adversarial = create_auroc_metrics(model=model, args=args, adversarial=True)
@@ -292,7 +295,6 @@ def run(args):
 
         # append the random_id to the dataframe
         df["save_id"] = id
-        df["train_id"] = train_id
 
         # save accuracy to dataframe
         add_experiment_results(df, results=accuracy_dict, column_name="accuracy")
@@ -300,6 +302,10 @@ def run(args):
         add_experiment_results(df, results=aurocs_test, column_name="auroc_test")
         add_experiment_results(df, results=aurocs_adversarial, column_name="auroc_adversarial")
         add_experiment_results(df, results=losses, column_name="loss")
+        df["auroc_adversarial_path"] = f"adversarial_aurocs/{id}.json"
+        df["train_auroc_path"] = f"training_aurocs/{id}.json"
+        df["test_auroc_path"] = f"test_aurocs/{id}.json"
+        
 
         # read in the current dataframe that already contains the results from the previous experiments
         try:

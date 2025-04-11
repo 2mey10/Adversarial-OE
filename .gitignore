@@ -319,4 +319,9 @@ notes.md
 *.xlsx
 /adversarial_aurocs
 /training_aurocs
+/test_aurocs
 /plots
+
+# slurm stuff
+*.out
+*.pyout

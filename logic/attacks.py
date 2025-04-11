@@ -269,7 +269,7 @@ def mifgsm_softmax(model, inlier, outlier, target_inlier, target_outlier, eps_oe
 
 def generate_adversarial_outlier(args, model, inlier, outlier, target_inlier, target_outlier, eps_oe, device):
 
-    if eps_oe == 0:
+    if eps_oe == 0 or args.adv_oe == "None":
         return outlier
 
     attack_methods = {
