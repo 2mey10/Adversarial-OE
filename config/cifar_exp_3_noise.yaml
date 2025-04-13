@@ -8,7 +8,7 @@ short_name: 'cifar_exp_3_noise'
 
 # which model? We only use wrn -> [wrn]
 model: wrn
-# which dataset to use? -> [cifar10, cifar100, imagenet]
+# which dataset to use? -> [cifar10, cifar100]
 #dataset_in: [cifar10,cifar100]
 # which dataset to use as outliers? In our paper we use GAN_IMG, but 300K is supported for  cifar10 and cifar100 -> [GAN_IMG, 300K]
 dataset_out: GAN_IMG
