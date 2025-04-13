@@ -8,7 +8,7 @@ short_name: 'cifar_exp_2_sigma'
 
 # which model? We only use wrn -> [wrn]
 model: wrn
-# which dataset to use? -> [cifar10, cifar100, imagenet]
+# which dataset to use? -> [cifar10, cifar100]
 #dataset_in: [cifar10,cifar100]
 # which dataset to use as outliers? In our paper we use GAN_IMG, but 300K is supported for  cifar10 and cifar100 -> [GAN_IMG, 300K]
 dataset_out: GAN_IMG
@@ -48,16 +48,6 @@ alpha_oe: 0.03
 # steps for iterative attacks
 steps_oe: 20
 
-
-# ---- configuration for imagenet experiments ----
-
-
-# Iterations for imagenet training
-iter: 2000
-# Path to imagenet data
-imagenet_path : '/nfs1/kirchhei/imagenet-2012/'
-# path to imagenet gan outliers
-imagenet_gan_out_path: '/nfs1/kirchhei/imagenet-gan/'
 # Number of outlier images to use | specific to the 64 batch size, thus we need a multiple of 64
 n_out_images: 9984
 # sigma for GAN_IMG
