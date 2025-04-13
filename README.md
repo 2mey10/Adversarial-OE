@@ -35,6 +35,7 @@ Outliers in this work were generated in this work: https://openreview.net/forum?
 The GAN generated files can be found at the link below: replace x.y with e.g. 2.0 to download the dataset generated with a sigma of 2.0 
 > https://files.kondas.de/goe-data/samples-x.y.npz
 
+Sigmas from 0.0, 0.1, ... to 10.0 are supported.
 Afterwards, place them in the folder ```datasets/```
 
 # Run the code
