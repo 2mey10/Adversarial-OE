@@ -9,7 +9,7 @@ from torch.utils.data import  DataLoader
 import pytorch_ood
 from pytorch_ood.utils import OODMetrics, ToRGB, ToUnknown
 from pytorch_ood.dataset.img import Textures, TinyImageNetCrop, TinyImageNetResize, LSUNCrop, LSUNResize, GaussianNoise, \
-    UniformNoise, FoolingImages, ImageNetO
+    UniformNoise, FoolingImages
 from tqdm import tqdm
 from torch.utils.data import Subset
 from pytorch_ood.model import WideResNet
@@ -20,10 +20,6 @@ def get_cifar_test_transform():
     mean = [x / 255 for x in [125.3, 123.0, 113.9]]
     std = [x / 255 for x in [63.0, 62.1, 66.7]]
     return trn.Compose([pytorch_ood.utils.ToRGB(), trn.ToTensor(), trn.Normalize(mean, std), resize])
-
-def get_imagenet_rgb_transform():
-    imagenet_transform = torchvision.models.Wide_ResNet50_2_Weights.DEFAULT.transforms()
-    return trn.Compose([ToRGB(),imagenet_transform])
 
 def select_first_n_classes_cifar100(cifar100_dataset, n_classes):
     """
@@ -67,29 +63,19 @@ def create_known_dataset(args):
         print("Creating CIFAR-100 dataset for evaluation")
         return dset.CIFAR100('datasets', train=False, transform=test_transform, download=True)
 
-    if dataset_to_test == "imagenet":
-        print("Creating ImageNet dataset for evaluation")
-        test_transform = torchvision.models.Wide_ResNet50_2_Weights.DEFAULT.transforms()
-        return dset.ImageNet(root=args.imagenet_path, split='val', transform=test_transform)
-        #return dset.ImageNet(root='/nfs1/kirchhei/imagenet-2012/', split='val', transform=test_transform)
 
 
 def calculate_ood_metrics(dataset_loader, dataset_name, model,adversarial=False):
     softmax = MaxSoftmax(model)
     energy = EnergyBased(model)
 
-    # norm_std = WideResNet.norm_std_for("cifar10-pt")
-    # odin = ODIN(model,  norm_std=norm_std, eps=0.002)
-
     metrics = OODMetrics()
     metrics_energy = OODMetrics()
-    # metrics_odin = OODMetrics()
 
     if adversarial:
         print(f"Running adversarial attacks on {dataset_name}")
         softmax_metrics = []
         energy_metrics = []
-        # odin_metrics = []
         for eps in [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]:
             for x, y in tqdm(dataset_loader):
                 # compute fgsm without library
@@ -103,7 +89,6 @@ def calculate_ood_metrics(dataset_loader, dataset_name, model,adversarial=False)
                     logits = model(x_adv.cuda())
                     metrics.update(softmax.score(logits), y)
                     metrics_energy.update(energy.score(logits), y)
-                    # metrics_odin.update(odin(x.cuda()), y)
 
             m_softmax = metrics.compute()
             m_softmax.update({
@@ -119,20 +104,11 @@ def calculate_ood_metrics(dataset_loader, dataset_name, model,adversarial=False)
                 "Epsilon": eps
             })
 
-            # m_odin = metrics_odin.compute()
-            # m_odin.update({
-            #     "Dataset": dataset_name,
-            #     "Method": "Adversarial ODIN",
-            #     "Epsilon": eps
-            # })
-
             softmax_metrics.append(m_softmax)
             energy_metrics.append(m_energy)
-            # odin_metrics.append(m_odin)
 
             print(f"Softmax AUROC for eps {eps} -> {m_softmax['AUROC']:.3%}")
             print(f"Energy AUROC for eps {eps} -> {m_energy['AUROC']:.3%}")
-            # print(f"ODIN AUROC for eps {eps} -> {m_odin['AUROC']:.3%}")
 
         return softmax_metrics, energy_metrics#, odin_metrics
 
@@ -143,7 +119,6 @@ def calculate_ood_metrics(dataset_loader, dataset_name, model,adversarial=False)
                 logits = model(x.cuda())
                 metrics.update(softmax.score(logits), y)
                 metrics_energy.update(energy.score(logits), y)
-                # metrics_odin.update(odin(x.cuda()), y)
 
         m_softmax = metrics.compute()
         m_softmax.update({
@@ -156,12 +131,6 @@ def calculate_ood_metrics(dataset_loader, dataset_name, model,adversarial=False)
             "Dataset": dataset_name,
             "Method": "Energy"
         })
-
-        # m_odin = metrics_odin.compute()
-        # m_odin.update({
-        #     "Dataset": dataset_name,
-        #     "Method": "ODIN"
-        # })
 
         return m_softmax, m_energy#, m_odin
 
@@ -177,17 +146,14 @@ def create_auroc_metrics(args,model, adversarial=False):
 
     softmax_metrics = []
     energy_metrics = []
-    # odin_metrics = []
 
     print(f"Running evaluation for dataset {args.dataset_in}")
     for dataset_name, dataset in ood_datasets.items():
         print("Testing dataset", dataset_name)
         dataset_loader = DataLoader(dataset + dataset_in_test, batch_size=128, num_workers=1)
-        # m_softmax, m_energy, m_odin = calculate_ood_metrics(dataset_loader, dataset_name, model,adversarial=adversarial)
         m_softmax, m_energy = calculate_ood_metrics(dataset_loader, dataset_name, model,adversarial=adversarial)
         softmax_metrics.append(m_softmax)
         energy_metrics.append(m_energy)
-        # odin_metrics.append(m_odin)
 
         #fallback mode, as adversarial attacks completely ruin this code xd
         try:
@@ -201,7 +167,6 @@ def create_auroc_metrics(args,model, adversarial=False):
         # average metrics
         metrics_sum_softmax = {"AUROC": 0, "AUPR-IN": 0, "AUPR-OUT": 0, "FPR95TPR": 0}
         metrics_sum_energy = {"AUROC": 0, "AUPR-IN": 0, "AUPR-OUT": 0, "FPR95TPR": 0}
-        # metrics_sum_odin = {"AUROC": 0, "AUPR-IN": 0, "AUPR-OUT": 0, "FPR95TPR": 0}
 
         for metric in softmax_metrics:
             for key in metrics_sum_softmax.keys():
@@ -211,13 +176,8 @@ def create_auroc_metrics(args,model, adversarial=False):
             for key in metrics_sum_energy.keys():
                 metrics_sum_energy[key] += metric[key]
 
-        # for metric in odin_metrics:
-        #     for key in metrics_sum_odin.keys():
-        #         metrics_sum_odin[key] += metric[key]
-
         metrics_average_softmax = {key: value / len(softmax_metrics) for key, value in metrics_sum_softmax.items()}
         metrics_average_energy = {key: value / len(energy_metrics) for key, value in metrics_sum_energy.items()}
-        # metrics_average_odin = {key: value / len(odin_metrics) for key, value in metrics_sum_odin.items()}
 
         # Calculate the averages
         softmax_metrics.append({
@@ -230,13 +190,9 @@ def create_auroc_metrics(args,model, adversarial=False):
             "metrics": metrics_average_energy
         })
 
-        # odin_metrics.append({
-        #     "Dataset": "Average ODIN AUROC",
-        #     "metrics": metrics_average_odin
-        # })
         print("Average Softmax:",metrics_average_softmax)
         print("Average Energy:",metrics_average_energy)
-        # print("Average ODIN:",metrics_average_odin)
+
     except Exception as e:
         print(f"Error in calculating average metrics: {e}")
         pass
@@ -247,16 +203,6 @@ def create_auroc_metrics(args,model, adversarial=False):
 
 def get_ood_sets(dataset_in):
     print(f"Getting OOD datasets for {dataset_in}")
-    if dataset_in == "imagenet":
-        test_transform = get_imagenet_rgb_transform()
-        return {
-        "ImageNetO": ImageNetO(root="/nfs1/botschen/datasets/",
-                               download=True, transform=test_transform, target_transform=ToUnknown()),
-        # "iNaturalist": iNaturalist(root="/nfs1/botschen/datasets/",
-        #                             download=True, transform=test_transform, target_transform=ToUnknown()),
-        # "NINCO": NINCO(root="/nfs1/botschen/datasets/",
-        #                 download=True, transform=test_transform, target_transform=ToUnknown())
-    }
 
     if dataset_in in ["cifar10","cifar100"]:
         test_transform = get_cifar_test_transform()

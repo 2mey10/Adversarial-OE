@@ -33,16 +33,6 @@ def get_transforms(dataset_name, img_size=32):
     elif dataset_name == "cifar100":
         mean = [0.5071, 0.4865, 0.4409]
         std = [0.2673, 0.2564, 0.2762]
-    elif dataset_name == "imagenet":
-        # transform = trn.Compose([
-        #         trn.Resize(256),
-        #         trn.CenterCrop(224),
-        #         ToRGB(),
-        #         trn.ToTensor(),
-        #         trn.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        #     ])
-        transform = torchvision.models.Wide_ResNet50_2_Weights.DEFAULT.transforms()
-        return transform, transform
     else:
         raise ValueError(f"Unsupported dataset: {dataset_name}")
 
@@ -70,7 +60,7 @@ def get_training_datasets(args):
     :return: the training datasets for the in-distribution and the out-of-distribution data
     """
     # check if inlier dataset is supported
-    if args.dataset_in not in ["cifar10", "cifar100", "imagenet"]:
+    if args.dataset_in not in ["cifar10", "cifar100"]:
         raise ValueError(f"Unsupported dataset: {args.dataset_in}")
 
     # check if outlier dataset is supported
@@ -89,10 +79,6 @@ def get_training_datasets(args):
         if hasattr(args, 'n_classes') and args.n_classes < 100:
             train_data_in = select_first_n_classes_cifar100(train_data_in, args.n_classes)
 
-    if args.dataset_in == "imagenet":
-        train_transform, _ = get_transforms("imagenet",224)
-        train_data_in = dset.ImageNet(root=args.imagenet_path, split='train', transform=train_transform)
-
     # check for dataset_out to prepare outliers
     if args.dataset_out == '300K':
         train_transform, _ = get_transforms("cifar10",32)
@@ -109,14 +95,6 @@ def get_training_datasets(args):
 
             gan_data = torch.from_numpy(gan_data_numpy['x'])
 
-            # if args.dataset_in == "cifar10":
-            #     gan_file_name = "samples-c10.pt"
-            # if args.dataset_in == "cifar100":
-            #     gan_file_name = "samples-c100.pt"
-
-            # gan_path = os.path.join(os.getcwd(), 'datasets', gan_file_name)
-            # #print(gan_path)
-            # gan_data = torch.load(gan_path)
             # normalize gan images and set the target to -1
             train_data_out = [(el / 255, -1) for el in gan_data]
             train_data_out = random_split(train_data_out,[args.n_out_images, len(train_data_out)-args.n_out_images])[0]
@@ -124,13 +102,6 @@ def get_training_datasets(args):
             while len(train_data_out) < 50000:
                 train_data_out = train_data_out + train_data_out
             train_data_out = Subset(train_data_out, range(50000))
-
-        if args.dataset_in == "imagenet":
-            gan_data_path = f"{args.imagenet_gan_out_path}{args.gan_sigma}/"
-            train_transform, _ = get_transforms("imagenet", 224)
-            train_data_out = dset.ImageFolder(gan_data_path, transform=train_transform,
-                                              target_transform=pytorch_ood.utils.ToUnknown())
-            train_data_out = random_split(train_data_out,[args.n_out_images, len(train_data_out)-args.n_out_images])[0]
 
     return train_data_in, train_data_out
 
@@ -143,11 +114,6 @@ def get_test_dataset(args):
     elif args.dataset_in == "cifar100":
         _, test_transform = get_transforms(args.dataset_in)
         return dset.CIFAR100(root="datasets", train=False, transform=test_transform, download=True)
-
-    elif args.dataset_in == "imagenet":
-        _, test_transform = get_transforms("imagenet", 224)
-        print(test_transform)
-        return dset.ImageNet(args.imagenet_path, split='val', transform=test_transform)
 
     else:
         raise ValueError("Unknown dataset: {}".format(args.dataset_in))
@@ -166,9 +132,6 @@ def get_model(args):
             model = WideResNet(num_classes=10, pretrained="cifar10-pt").to(device).eval()
         if args.dataset_in == "cifar100":
             model = WideResNet(num_classes=100, pretrained="cifar100-pt").to(device).eval()
-        if args.dataset_in == "imagenet":
-            weights = torchvision.models.Wide_ResNet50_2_Weights.IMAGENET1K_V2
-            model = torchvision.models.wide_resnet50_2(weights=weights).to(device).eval()
     else:
         raise ValueError("This model is not defined and implemented!")
 
@@ -237,9 +200,6 @@ def create_optimizer_and_scheduler(model, args, train_loader_in):
 
     return optimizer, scheduler
 
-    
-
-    
 
 def compute_accuracy(model, device, args):
     model = model.to(device).eval()

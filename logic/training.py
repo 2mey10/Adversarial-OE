@@ -118,78 +118,6 @@ def run(args):
             auroc = "empty"
 
         return train_loss,auroc
-
-    def train_adversarial_imagenet(iters):
-        loss_avg = 0.0
-        # start at a random point of the outlier dataset; this induces more randomness without obliterating locality
-        # When using GAN Images as outliers, the offset is not used, as this somehow leads to a crash
-        if args.dataset_out != "GAN_IMG":
-            train_loader_outlier.dataset.offset = np.random.randint(len(train_loader_outlier.dataset))
-        print("Starting adversarial imagenet training for %d iterations" % iters)
-        print("Length of train_loader_inlier: ", len(train_loader_inlier))
-        print("Length of train_loader_outlier: ", len(train_loader_outlier))
-
-        it_train_in = iter(train_loader_inlier)
-        it_train_out = iter(train_loader_outlier)
-        bar = tqdm(range(iters))
-
-        mav = 0.0
-        mavs = []
-        aurocs = []
-
-        for i in bar:
-            model.train()  # enter train mode
-            try:
-                inlier,target_inlier = next(it_train_in)
-                outlier,target_outlier = next(it_train_out)
-            except:
-                it_train_in = iter(train_loader_inlier)
-                it_train_out = iter(train_loader_outlier)
-                
-            # stop if we have covered the entire outlier dataset and we have remains (10000%64=16 -> the code would crash)
-            if len(outlier) < args.oe_batch_size:
-                continue
-
-            # perform adversarial attack on outliers
-            perturbed_outlier = generate_adversarial_outlier(args, model, inlier, outlier, target_inlier,
-                                                             target_outlier, args.eps_oe, device)
-
-            # concatenate inlier and perturbed outlier
-            data = torch.cat((inlier.to(device), perturbed_outlier.to(device)), 0).to(device)
-
-            # forward
-            data = data.float()
-            y_hat = model(data)
-
-            # backward
-            optimizer.zero_grad()
-
-            # calculate loss
-            loss = loss_fn(y_hat, torch.cat((target_inlier.to(device), target_outlier.to(device)), 0))
-
-            # update parameters
-            loss.backward()
-            optimizer.step()
-
-            scheduler.step()
-            # exponential moving average
-            mav = 0.2 * loss.item() + 0.8 * mav
-            mavs.append(mav)
-
-            bar.set_postfix({"loss": mav})
-            if i % 100 == 0:
-                # Check if args.train_auroc exists, else set it to False by default
-                if hasattr(args, 'train_auroc') and args.train_auroc:
-                    auroc = create_auroc_metrics(model=model, args=args, adversarial=False)
-                else:
-                    auroc = "empty"
-                aurocs.append({
-                    "loss": mav,
-                    "auroc": auroc
-                })
-                print(f"AUROC for iteration {i}: {auroc}")
-
-        return mavs,aurocs
     
     def run_training_loop(args):
         """
@@ -220,9 +148,6 @@ def run(args):
 
                 print(
                     f'Epoch {epoch + 1:3d} | Time {int(time.time() - begin_epoch):5d} | Train Loss {train_loss_epoch:.4f}')
-
-        elif args.dataset_in == "imagenet":
-            losses, aurocs_train = train_adversarial_imagenet(iters=args.iter)
 
         else:
             raise ValueError("Unknown dataset: {}".format(args.dataset_in))
@@ -256,7 +181,6 @@ def run(args):
 
         # ----------- compute Accuracy -----------
         accuracy_dict = compute_accuracy(model, device, args)
-        #save_accuracy_to_file(accuracy_dict, architecture_folder)
 
         # ----------- compute testing AUROC -----------
         if args.test_auroc:
@@ -281,12 +205,6 @@ def run(args):
         Path("adversarial_aurocs").mkdir(parents=True, exist_ok=True)
         with open(f"adversarial_aurocs/{id}.json", "w") as f:
             json.dump(aurocs_adversarial, f)
-        
-        # then append the random_id to the dataframe, so we can actually backtrack the results to the corresponding training
-        # this gets done later
-        
-        # ----------- save results -----------
-        #save_auroc_to_file(aurocs_train, aurocs_test, aurocs_adversarial, architecture_folder)
 
         # ----------- add results to dataframe -----------
 
