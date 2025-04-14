@@ -12,9 +12,9 @@ Synthetic Outliers drawn from a BigGAN trained-on CIFAR-100 with increasingly st
 ## Repository Contents
 This repository enables the user to do the following things:
 - Finetune a pretrained WideResNet with (Adversarial) Outlier Exposure
-- The Finetuning can get assisted by Adversarial Attacks on the Inliers and Outliers
-- As Inlier Sets we currently support: CIFAR10, CIFAR100
-- As Outlier Sets we use GAN-generated Images, which need to be manually created (or downloaded) and added to the data folder /datasets
+- Training Data can be augmented by Adversarial Attacks (on ID and OOD)
+- As ID we currently support: CIFAR10, CIFAR100
+- As training OOD data we use GAN-generated images, which need to be manually created (or downloaded) and added to the `/datasets` folder
 - Supported Adversarial Attacks: FGSM, PGD, MI-FGSM, EBA, EPS_GAUSS, None
 
  ## Folder structure:
@@ -29,8 +29,9 @@ This repository enables the user to do the following things:
 - `attacks.py`: adversarial attack logic
 
 ## Installation
-We recommend using anaconda for version management and python 3.8 for compatibility
+We recommend using Anaconda for package management and Python 3.8 for compatibility.
 
+You can install all dependencies with:
 > pip install -r requirements.txt
 
 
